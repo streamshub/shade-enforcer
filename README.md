@@ -4,7 +4,7 @@ Enforce that jars have a configurable string in their name at shading time.
 
 To implement this we add an additional Filter implementation at the end of the user supplied list.
 
-To use in your project:
+To use in your project (you would have to build the plugin yourself, it's not in maven central):
 
 ```xml
 <plugin>
