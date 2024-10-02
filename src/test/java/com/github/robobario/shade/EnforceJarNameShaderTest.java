@@ -10,6 +10,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class EnforceJarNameShaderTest {
 
+    public static final String SHADED_JAR = "arbitrary";
+
     @Test
     public void isFilteredDoesNotFilterAnything() {
         EnforceJarNameShader.EnforceJarNameFilter filter = createEnforceFilter("abc", false);
@@ -27,13 +29,16 @@ class EnforceJarNameShaderTest {
         EnforceJarNameShader.EnforceJarNameFilter filter = createEnforceFilter("good", false);
         assertThat(filter.canFilter(new File("bad"))).isFalse();
         assertThat(filter.canFilter(new File("good"))).isFalse();
+        assertThatCode(filter::finished).doesNotThrowAnyException();
     }
 
     @Test
     public void canFilterConfiguredToThrowOnViolation() {
         boolean failOnViolation = true;
         EnforceJarNameShader.EnforceJarNameFilter filter = createEnforceFilter("abc", failOnViolation);
-        assertThatThrownBy(() -> filter.canFilter(new File("bad.jar"))).isInstanceOf(RuntimeException.class).hasMessageContaining("jar name bad.jar does not contain abc");
+        filter.canFilter(new File("bad.jar"));
+        assertThatThrownBy(filter::finished).isInstanceOf(RuntimeException.class)
+                .hasMessage("compliance violation while shading " + SHADED_JAR + ": bad.jar does not contain abc");
     }
 
     @Test
@@ -43,6 +48,6 @@ class EnforceJarNameShaderTest {
     }
 
     private static EnforceJarNameShader.EnforceJarNameFilter createEnforceFilter(String expectJarNameContains, boolean failOnViolation) {
-        return new EnforceJarNameShader.EnforceJarNameFilter(expectJarNameContains, failOnViolation);
+        return new EnforceJarNameShader.EnforceJarNameFilter(expectJarNameContains, failOnViolation, new File(SHADED_JAR));
     }
 }
