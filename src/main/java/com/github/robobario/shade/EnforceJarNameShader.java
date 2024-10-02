@@ -11,6 +11,7 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -19,19 +20,20 @@ import java.util.stream.Stream;
 @Singleton
 public class EnforceJarNameShader extends DefaultShader {
 
-    private final EnforceJarNameFilter enforceJarNameFilter;
+    private final String expectJarNameContains;
+    private final boolean failOnViolation;
 
-    public EnforceJarNameShader(){
-        String expectJarNameContains = System.getProperty("enforceShadedJarNameContains");
+    public EnforceJarNameShader() {
+        expectJarNameContains = System.getProperty("enforceShadedJarNameContains");
         if (expectJarNameContains == null) {
             throw new RuntimeException("Requires system property enforceShadedJarNameContains");
         }
-        boolean failOnViolation = Boolean.getBoolean("enforceShadedJarNameFailOnViolation");
-        enforceJarNameFilter = new EnforceJarNameFilter(expectJarNameContains, failOnViolation);
+        failOnViolation = Boolean.getBoolean("enforceShadedJarNameFailOnViolation");
     }
 
     @Override
     public void shade(ShadeRequest shadeRequest) throws IOException, MojoExecutionException {
+        EnforceJarNameFilter enforceJarNameFilter = new EnforceJarNameFilter(expectJarNameContains, failOnViolation, shadeRequest.getUberJar());
         /*
           We rely on the enforcer being the final filter, the implication being we are only checking jars that have not been filtered
           by any user configuration.
@@ -44,21 +46,22 @@ public class EnforceJarNameShader extends DefaultShader {
     static class EnforceJarNameFilter implements Filter {
         final String expectJarNameContains;
         final boolean failOnViolation;
+        private final File uberJar;
+        private final List<String> violations = new ArrayList<>();
         private static final Logger LOGGER = LoggerFactory.getLogger(EnforceJarNameFilter.class);
 
-        EnforceJarNameFilter(String expectJarNameContains, boolean failOnViolation){
+        EnforceJarNameFilter(String expectJarNameContains, boolean failOnViolation, File uberJar) {
             this.expectJarNameContains = expectJarNameContains;
             this.failOnViolation = failOnViolation;
+            this.uberJar = uberJar;
         }
 
         @Override
         public boolean canFilter(File jar) {
             if (!jar.getName().contains(expectJarNameContains)) {
-                String message = "jar name " + jar.getName() + " does not contain " + expectJarNameContains;
-                LOGGER.warn(message);
-                if(failOnViolation){
-                    throw new RuntimeException(message);
-                }
+                String violation = jar.getName() + " does not contain " + expectJarNameContains;
+                violations.add(violation);
+                LOGGER.warn("compliance violation while shading " + uberJar.getName() + ": " + violation);
             }
             return false;
         }
@@ -71,7 +74,10 @@ public class EnforceJarNameShader extends DefaultShader {
 
         @Override
         public void finished() {
-            //noop
+            if (failOnViolation && !violations.isEmpty()) {
+                String violationsDescription = String.join(", ", violations);
+                throw new RuntimeException("compliance violation while shading " + uberJar.getName() + ": " + violationsDescription);
+            }
         }
     }
 }

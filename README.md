@@ -13,7 +13,7 @@ To use in your project (you would have to build the plugin yourself, it's not in
   <version>3.5.1</version>
   <dependencies>
     <dependency>
-      <groupId>com.github.robobario</groupId>
+      <groupId>com.github.streamshub</groupId>
       <artifactId>shade-enforcer</artifactId>
       <version>1.0.0</version>
     </dependency>
