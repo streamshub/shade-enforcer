@@ -15,7 +15,7 @@ To use in your project (you would have to build the plugin yourself, it's not in
     <dependency>
       <groupId>com.github.robobario</groupId>
       <artifactId>shade-enforcer</artifactId>
-      <version>1.0.0</version>
+      <version>2.0.0-SNAPSHOT</version>
     </dependency>
   </dependencies>
   <configuration>
